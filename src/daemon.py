@@ -6,17 +6,23 @@ import colorsys
 import tkinter
 import time
 
+VERSION = "1.0"
+DAEMON_HEADER = f"RGB_Daemon[{VERSION}]-"
+CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
+
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
 def try_connection(port, baudrate):
     device = serial.Serial(port, baudrate)
-    device.write("RGB_Controller[1.0]-connection")
+    device.write(DAEMON_HEADER + "connection")
     response = device.readline().strip()
 
-    if response == "OK":
-        device.write("CONNECTED")
+    success = response == CONTROLLER_HEADER + "ok"
+    if success:
+        device.write(DAEMON_HEADER + "connected")
+        
     device.close()  # Chiude la connessione seriale dopo aver effettuato l'Handshake
 
-    return response == "OK"
+    return success
 
 # Cerca un dispositivo compatibile tra i bus seriali collegati
 def search_compatible_devices(baudrate) -> str:
@@ -59,8 +65,8 @@ def rgb_to_hex(color: tuple[int]):
 
 def main():
     # Impostazioni per la comunicazione seriale con Arduino
-    port = "/dev/ttyACM0"  # Percorso della porta seriale
-    baudrate = 9600
+    port = "/dev/ttyACM0"   # Percorso della porta seriale
+    baudrate = 115200       # Baudrate default
 
     # Inizializza la comunicazione seriale
     ser = serial.Serial(port, baudrate)
