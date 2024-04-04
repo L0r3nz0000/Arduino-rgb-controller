@@ -10,20 +10,22 @@ typedef enum {
   VIDEO, MUSIC, NOT_SET  // Modalità musica da implementare successivamente
 } MODE;
 
-MODE mode = NOT_SET;
+typedef struct {
+  double r;
+  double g;
+  double b;
+} RGB;
+
+// Imposta il colore dei led
+void setColor(RGB color) {
+  analogWrite(RED, 255-color.r);
+  analogWrite(GREEN, 255-color.g);
+  analogWrite(BLUE, 255-color.b);
+}
 
 // Spegne i led
 void resetColor() {
-  digitalWrite(RED, HIGH);
-  digitalWrite(GREEN, HIGH);
-  digitalWrite(BLUE, HIGH);
-}
-
-// Imposta il colore dei led
-void setColor(int r, int g, int b) {
-  analogWrite(RED, 255-r);
-  analogWrite(GREEN, 255-g);
-  analogWrite(BLUE, 255-b);
+  setColor({0, 0, 0});
 }
 
 // Prova la connessione con il computer
@@ -60,23 +62,40 @@ mode readMode() {
   }
 }
 
+String requestColor() {
+  
+}
+
+RGB colorConverter(String hexColor) {
+  int r, g, b;
+  sscanf(hexColor.c_str(), "%02x%02x%02x", &r, &g, &b);
+  
+  return RGB {r, g, b};
+}
+
 void setup() {
   Serial.begin(115200);
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
   pinMode(BLUE, OUTPUT);
+
+  resetColor();
 }
+
+RGB color_rgb;
+MODE mode = NOT_SET;
 
 void loop() {
   if (tryConnection()) {
-    delay(500);  // delay per permettere al computer di riaprire alla porta seriale
+    delay(500);  // delay per permettere al computer di riaprire la porta seriale
 
-    mode = readMode(); 
+    mode = readMode();
     
     while (true) {
       
       switch (mode) {
         case VIDEO:  // Modalità video
+          color_rgb = colorConverter(requestColor());
           
       }
     }
