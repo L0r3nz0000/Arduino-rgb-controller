@@ -13,13 +13,19 @@ DEBUG_OUTPUT = True
 
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
 def try_connection(port, baudrate):
-    device = serial.Serial(port, baudrate)
-    device.write((DAEMON_HEADER + "connection").encode())
-    response = device.readline().strip()
+    device = serial.Serial(port, baudrate, timeout=1)
+
+    if not device.is_open:
+        return False
+    
+    if DEBUG_OUTPUT:
+        print("device:", port, "connected")
+    device.write((DAEMON_HEADER + "connection" + "\n").encode())
+    response = device.readline().strip().decode()
 
     if DEBUG_OUTPUT:
-        print("device: ", port, DAEMON_HEADER + "connection")
-        print("response: ", response)
+        print("sent: ", port, f"\"{DAEMON_HEADER}connection\"")
+        print("response: ", response, "\n")
 
     success = response == CONTROLLER_HEADER + "ok"
     if success:
@@ -74,20 +80,26 @@ def main():
     # Impostazioni per la comunicazione seriale con Arduino
     baudrate = 115200       # Baudrate default
 
-    print("Trying connection...")
+    print("Searching devices...")
 
     port = search_compatible_devices(baudrate)
 
     if port:
         # Inizializza la comunicazione seriale
-        print("Connected")
-        ser = serial.Serial(port, baudrate)
+        ser = serial.Serial(port, baudrate, timeout=1)
+
+        if ser.is_open:
+            print(f"\033[92mConnected with: {port}\033[39m")
+        else:
+            print("Connection timed out")
+            exit(0)
     else:
         print("No compatible devices found")
         exit(0)
     
-    
-    while True:
+    ser.write(DAEMON_HEADER + "mode:v" + "\n")
+
+    while ser.is_open:
         # Acquisisci uno screenshot e calcola il colore medio
         screenshot = ImageGrab.grab()
         

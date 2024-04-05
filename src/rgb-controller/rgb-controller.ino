@@ -30,40 +30,62 @@ void resetColor() {
 
 // Prova la connessione con il computer
 bool tryConnection() {
-  if (Serial.available() > 0) {
+  while (!Serial.available());
+  
+  String message = Serial.readStringUntil('\n');
+  
+  if (message == DAEMON_HEADER + "connection") {
+    Serial.println(CONTROLLER_HEADER + "ok");     // Invia il messaggio di conferma al computer
+
+    while (!Serial.available());
     String message = Serial.readStringUntil('\n');
     
-    if (message == DAEMON_HEADER + "connection") {
-      Serial.println(CONTROLLER_HEADER + "ok");     // Invia il messaggio di conferma al computer
-      if (Serial.available() > 0) {
-        String message = Serial.readStringUntil('\n');
-        
-        if (message == DAEMON_HEADER + "connected"){  // Connessione effettuata con successo
-          return true;
-        }
-      }
+    if (message == DAEMON_HEADER + "connected"){  // Connessione effettuata con successo
+      Serial.println("daje");
+      return true;
     }
   }
   return false;
 }
 
 // legge la modalità
-MODE readMode() {
+MODE readModeBlocking() {
+  while (!Serial.available());
+  
   if (Serial.available() > 0) {
     String m = Serial.readStringUntil('\n');
 
     if (m == DAEMON_HEADER + "mode:v") {
+      Serial.println(CONTROLLER_HEADER + "ok");
       return VIDEO;
     } else if (m == DAEMON_HEADER + "mode:m") {
+      Serial.println(CONTROLLER_HEADER + "ok");
       return MUSIC;
     } else {
+      Serial.println(CONTROLLER_HEADER + "error");
       return NOT_SET;
     }
   }
 }
 
+bool isColor(String color) {
+  if (color.length == 7) {
+    if 
+  }
+}
+
 String requestColor() {
+  Serial.println(CONTROLLER_HEADER + "send_color");
   
+  while (!Serial.available());
+  String color = Serial.readStringUntil('\n');
+  color = color.substr(0,7);
+  
+  if (isColor(color)) {
+    return color;
+  } else {
+    return "";
+  }
 }
 
 RGB colorConverter(String hexColor) {
@@ -89,7 +111,7 @@ void loop() {
   if (tryConnection()) {
     delay(500);  // delay per permettere al computer di riaprire la porta seriale
 
-    mode = readMode();
+    mode = readModeBlocking();
     
     while (true) {
       
