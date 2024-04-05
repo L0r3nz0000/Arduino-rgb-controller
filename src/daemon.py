@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+
+# Project page: https://github.com/L0r3nz0000/Arduino-rgb-controller
+
 from PIL import ImageGrab
 import serial
 import serial.tools.list_ports
@@ -63,13 +66,12 @@ def average_color(image):
 # Converte un colore in formato hls
 def rgb_to_hls(rgb: tuple[int]):
     rgb = [x/255.0 for x in rgb]  # Normalizza i canali del colore
-    h, l, s = colorsys.rgb_to_hls(*rgb)
-    return (h*360, l*100, s*100)  # Denormalizza i valori
+    hls = colorsys.rgb_to_hls(*rgb)
+    return hls  # Denormalizza i valori
 
 # Converte un colore in formato rgb
 def hls_to_rgb(hls: tuple[float]):
-    h, l, s = hls[0] / 360, hls[1] / 100, hls[2] / 100
-    rgb = colorsys.hls_to_rgb(h, l, s)
+    rgb = colorsys.hls_to_rgb(*hls)
     rgb = [round(x*255.0) for x in rgb]  # Denormalizza i canali
     return rgb
 
@@ -108,8 +110,8 @@ def main():
 
         # Converte il colore in hls per poi modificare luminosità e saturazione
         hls = list(rgb_to_hls(avg_color))
-        hls[1] = 50     # Luminosità 50%
-        hls[2] = 100    # Saturazione 100%
+        hls[1] = 0.5    # Luminosità
+        hls[2] = 1      # Saturazione
         avg_color = hls_to_rgb(hls)
 
         # Converti il colore medio in formato esadecimale (hex)

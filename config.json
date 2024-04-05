@@ -1,5 +1,7 @@
 {
-  "SERIAL_PORT" : "auto",
+  "SATURATION" : 1,
+  "LIGHTNESS" : 0.5,
   "UPDATE_SPEED" : 0.5,
+  "SERIAL_PORT" : "auto",
   "BAUDRATE" : 115200 
 }
