@@ -3,22 +3,27 @@ from PIL import ImageGrab
 import serial
 import serial.tools.list_ports
 import colorsys
-import tkinter
 import time
 
 VERSION = "1.0"
 DAEMON_HEADER = f"RGB_Daemon[{VERSION}]-"
 CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
 
+DEBUG_OUTPUT = True
+
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
 def try_connection(port, baudrate):
     device = serial.Serial(port, baudrate)
-    device.write(DAEMON_HEADER + "connection")
+    device.write((DAEMON_HEADER + "connection").encode())
     response = device.readline().strip()
+
+    if DEBUG_OUTPUT:
+        print("device: ", port, DAEMON_HEADER + "connection")
+        print("response: ", response)
 
     success = response == CONTROLLER_HEADER + "ok"
     if success:
-        device.write(DAEMON_HEADER + "connected")
+        device.write((DAEMON_HEADER + "connected").encode())
         
     device.close()  # Chiude la connessione seriale dopo aver effettuato l'Handshake
 
@@ -29,6 +34,8 @@ def search_compatible_devices(baudrate) -> str:
     device = None
     ports = serial.tools.list_ports.comports()
     for port in ports:
+        if DEBUG_OUTPUT:
+            print("trying connection with:", port.device)
         if try_connection(port.device, baudrate):
             device = port.device
             break
@@ -65,12 +72,20 @@ def rgb_to_hex(color: tuple[int]):
 
 def main():
     # Impostazioni per la comunicazione seriale con Arduino
-    port = "/dev/ttyACM0"   # Percorso della porta seriale
     baudrate = 115200       # Baudrate default
 
-    # Inizializza la comunicazione seriale
-    ser = serial.Serial(port, baudrate)
+    print("Trying connection...")
 
+    port = search_compatible_devices(baudrate)
+
+    if port:
+        # Inizializza la comunicazione seriale
+        print("Connected")
+        ser = serial.Serial(port, baudrate)
+    else:
+        print("No compatible devices found")
+        exit(0)
+    
     
     while True:
         # Acquisisci uno screenshot e calcola il colore medio

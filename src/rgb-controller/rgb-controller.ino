@@ -11,9 +11,9 @@ typedef enum {
 } MODE;
 
 typedef struct {
-  double r;
-  double g;
-  double b;
+  int r;
+  int g;
+  int b;
 } RGB;
 
 // Imposta il colore dei led
@@ -48,7 +48,7 @@ bool tryConnection() {
 }
 
 // legge la modalità
-mode readMode() {
+MODE readMode() {
   if (Serial.available() > 0) {
     String m = Serial.readStringUntil('\n');
 
@@ -96,7 +96,7 @@ void loop() {
       switch (mode) {
         case VIDEO:  // Modalità video
           color_rgb = colorConverter(requestColor());
-          
+          setColor(color_rgb);
       }
     }
   }
