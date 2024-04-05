@@ -1,5 +1,5 @@
 {
   "SERIAL_PORT" : "auto",
   "UPDATE_SPEED" : 0.5,
-  "BAUDRATE" : 115200
+  "BAUDRATE" : 115200 
 }
