@@ -23,16 +23,17 @@ def try_connection(port, baudrate):
     
     if DEBUG_OUTPUT:
         print("device:", port, "connected")
+    
     device.write((DAEMON_HEADER + "connection" + "\n").encode())
-    response = device.readline().strip().decode()
+    response = device.readline().decode().strip()
 
     if DEBUG_OUTPUT:
-        print("sent: ", port, f"\"{DAEMON_HEADER}connection\"")
-        print("response: ", response, "\n")
+        print("sent:", port, f"\"{DAEMON_HEADER}connection\"")
+        print(f"response: \"{response}\"\n")
 
     success = response == CONTROLLER_HEADER + "ok"
     if success:
-        device.write((DAEMON_HEADER + "connected").encode())
+        device.write((DAEMON_HEADER + "connected" + "\n").encode())
         
     device.close()  # Chiude la connessione seriale dopo aver effettuato l'Handshake
 
@@ -96,9 +97,10 @@ def main():
             print("Connection timed out")
             exit(0)
     else:
-        print("No compatible devices found")
+        print("No compatible devices found or incompatible version")
         exit(0)
     
+    command = ser.readline().strip().decode()
     ser.write(DAEMON_HEADER + "mode:v" + "\n")
 
     while ser.is_open:
@@ -117,13 +119,18 @@ def main():
         # Converti il colore medio in formato esadecimale (hex)
         color_hex = rgb_to_hex(avg_color)
 
-        # Invia il colore alla porta seriale
-        ser.write((color_hex + ";").encode())
+        while True:
+            command = ser.readline().strip().decode()
+
+            if command == CONTROLLER_HEADER + "color?":
+                # Invia il colore alla porta seriale
+                ser.write((color_hex + ";").encode())
+                break
 
     """ 
     La connessione seriale non viene mai chiusa in 
     questo codice, ma viene fatto dallo script "release_serial.sh"
-    quando si blocca il servizio
+    quando viene bloccato il servizio
     """
 
 if __name__ == "__main__":

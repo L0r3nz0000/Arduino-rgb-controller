@@ -29,9 +29,8 @@ void resetColor() {
 }
 
 // Prova la connessione con il computer
-bool tryConnection() {
+bool tryConnectionBlocking() {
   while (!Serial.available());
-  
   String message = Serial.readStringUntil('\n');
   
   if (message == DAEMON_HEADER + "connection") {
@@ -41,15 +40,16 @@ bool tryConnection() {
     String message = Serial.readStringUntil('\n');
     
     if (message == DAEMON_HEADER + "connected"){  // Connessione effettuata con successo
-      Serial.println("daje");
       return true;
     }
   }
+  Serial.println(CONTROLLER_HEADER + "error");
   return false;
 }
 
 // legge la modalità
 MODE readModeBlocking() {
+  Serial.println(CONTROLLER_HEADER + "mode?");
   while (!Serial.available());
   
   if (Serial.available() > 0) {
@@ -68,24 +68,25 @@ MODE readModeBlocking() {
   }
 }
 
-bool isColor(String color) {
+/*bool isColor(String color) {
   if (color.length == 7) {
     if 
   }
-}
+}*/
 
 String requestColor() {
-  Serial.println(CONTROLLER_HEADER + "send_color");
+  Serial.println(CONTROLLER_HEADER + "color?");
   
   while (!Serial.available());
-  String color = Serial.readStringUntil('\n');
-  color = color.substr(0,7);
-  
-  if (isColor(color)) {
+  String color = Serial.readStringUntil(';');
+  Serial.println(color);
+
+  return color;  // Da verificare che sia un colore
+  /*if (isColor(color)) {
     return color;
   } else {
     return "";
-  }
+  }*/
 }
 
 RGB colorConverter(String hexColor) {
@@ -108,7 +109,7 @@ RGB color_rgb;
 MODE mode = NOT_SET;
 
 void loop() {
-  if (tryConnection()) {
+  if (tryConnectionBlocking()) {
     delay(500);  // delay per permettere al computer di riaprire la porta seriale
 
     mode = readModeBlocking();
@@ -119,6 +120,7 @@ void loop() {
         case VIDEO:  // Modalità video
           color_rgb = colorConverter(requestColor());
           setColor(color_rgb);
+          delay(600);
       }
     }
   }
