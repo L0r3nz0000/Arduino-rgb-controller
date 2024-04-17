@@ -22,7 +22,7 @@ def try_connection(port, baudrate):
         return False
     
     if DEBUG_OUTPUT:
-        print("device:", port, "connected")
+        print("port:", port, "open")
     
     device.write((DAEMON_HEADER + "connection" + "\n").encode())
     response = device.readline().decode().strip()

@@ -77,9 +77,10 @@ MODE readModeBlocking() {
 String requestColor() {
   Serial.println(CONTROLLER_HEADER + "color?");
   
-  while (!Serial.available());
+  while (Serial.available() < 8);
   String color = Serial.readStringUntil(';');
-  Serial.println(color);
+  
+  while (Serial.available()) Serial.read();  // Svuota il buffer (\n o space)
 
   return color;  // Da verificare che sia un colore
   /*if (isColor(color)) {
@@ -91,6 +92,7 @@ String requestColor() {
 
 RGB colorConverter(String hexColor) {
   int r, g, b;
+  hexColor = hexColor.substring(1);  // Rimuove il # iniziale
   sscanf(hexColor.c_str(), "%02x%02x%02x", &r, &g, &b);
   
   return RGB {r, g, b};
@@ -119,6 +121,9 @@ void loop() {
       switch (mode) {
         case VIDEO:  // Modalità video
           color_rgb = colorConverter(requestColor());
+          Serial.println(color_rgb.r);
+          Serial.println(color_rgb.g);
+          Serial.println(color_rgb.b);
           setColor(color_rgb);
           delay(600);
       }
