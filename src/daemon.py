@@ -2,6 +2,16 @@
 
 # Project page: https://github.com/L0r3nz0000/Arduino-rgb-controller
 
+'''
+23:23:09.163 -> RGB_Controller[1.0]-ok
+23:23:18.794 -> RGB_Controller[1.0]-mode?
+23:23:22.302 -> RGB_Controller[1.0]-ok
+23:23:22.302 -> RGB_Controller[1.0]-color?
+23:23:30.905 -> 0
+23:23:30.905 -> 255
+23:23:30.905 -> 0
+'''
+
 from PIL import ImageGrab
 import serial
 import serial.tools.list_ports
@@ -15,32 +25,33 @@ CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
 DEBUG_OUTPUT = True
 
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
-def try_connection(port, baudrate):
-    device = serial.Serial(port, baudrate, timeout=1)
-
-    if not device.is_open:
+def try_connection(ser):
+    if not ser.is_open:
         return False
     
     if DEBUG_OUTPUT:
-        print("port:", port, "open")
+        print("port:", ser.port, "open")
     
-    device.write((DAEMON_HEADER + "connection" + "\n").encode())
-    response = device.readline().decode().strip()
+    time.sleep(0.8)
+    ser.write((DAEMON_HEADER + "connection" + "\n").encode())
+
+    time.sleep(0.8)
+    response = ser.readline().decode().strip()
 
     if DEBUG_OUTPUT:
-        print("sent:", port, f"\"{DAEMON_HEADER}connection\"")
+        print("sent:", ser.port, f"\"{DAEMON_HEADER}connection\"")
         print(f"response: \"{response}\"\n")
 
     success = response == CONTROLLER_HEADER + "ok"
     if success:
-        device.write((DAEMON_HEADER + "connected" + "\n").encode())
-        
-    device.close()  # Chiude la connessione seriale dopo aver effettuato l'Handshake
+        ser.write((DAEMON_HEADER + "connected" + "\n").encode())
+    else:
+        ser.close()  # Chiude la connessione seriale in caso di fallimento
 
     return success
 
 # Cerca un dispositivo compatibile tra i bus seriali collegati
-def search_compatible_devices(baudrate) -> str:
+def search_compatible_devices(baudrate) -> str: #! do not use this -> to complete
     device = None
     ports = serial.tools.list_ports.comports()
     for port in ports:
@@ -81,18 +92,25 @@ def rgb_to_hex(color: tuple[int]):
 
 def main():
     # Impostazioni per la comunicazione seriale con Arduino
+    # TODO: caricare le configurazioni dal file config.json
     baudrate = 115200       # Baudrate default
 
     print("Searching devices...")
 
-    port = search_compatible_devices(baudrate)
+    # TODO: correggere la connessione automatica
+    #port = search_compatible_devices(baudrate)
+    port = "/dev/ttyACM0"
 
     if port:
         # Inizializza la comunicazione seriale
         ser = serial.Serial(port, baudrate, timeout=1)
 
         if ser.is_open:
-            print(f"\033[92mConnected with: {port}\033[39m")
+            if try_connection(ser):
+                print(f"\033[92mConnected with: {port}\033[39m")
+            else:
+                print("Device not compatible or incompatible version")
+                exit(0)
         else:
             print("Connection timed out")
             exit(0)
@@ -101,13 +119,13 @@ def main():
         exit(0)
     
     command = ser.readline().strip().decode()
-    ser.write(DAEMON_HEADER + "mode:v" + "\n")
+    ser.write((DAEMON_HEADER + "mode:v" + "\n").encode())
 
     while ser.is_open:
         # Acquisisci uno screenshot e calcola il colore medio
         screenshot = ImageGrab.grab()
         
-        screenshot = screenshot.resize((screenshot.width//4, screenshot.height//4))
+        screenshot = screenshot.resize((screenshot.width//5, screenshot.height//5))
         avg_color = average_color(screenshot)
 
         # Converte il colore in hls per poi modificare luminosità e saturazione

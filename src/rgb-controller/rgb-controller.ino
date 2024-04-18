@@ -28,22 +28,37 @@ void resetColor() {
   setColor({0, 0, 0});
 }
 
+void deleteBuffer() {
+  while (Serial.available()) Serial.read();  // Svuota il buffer
+}
+
+String readLine() {
+  if (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
+    deleteBuffer();
+    return line;
+  } else {
+    return "";
+  }
+}
+
 // Prova la connessione con il computer
 bool tryConnectionBlocking() {
   while (!Serial.available());
-  String message = Serial.readStringUntil('\n');
+  String message = readLine();
   
   if (message == DAEMON_HEADER + "connection") {
     Serial.println(CONTROLLER_HEADER + "ok");     // Invia il messaggio di conferma al computer
 
     while (!Serial.available());
-    String message = Serial.readStringUntil('\n');
+    String message = readLine();
     
     if (message == DAEMON_HEADER + "connected"){  // Connessione effettuata con successo
       return true;
     }
   }
-  Serial.println(CONTROLLER_HEADER + "error");
+  Serial.print(CONTROLLER_HEADER + "error: ");
+  Serial.println("Comando non valido: " + message);
   return false;
 }
 
@@ -53,7 +68,7 @@ MODE readModeBlocking() {
   while (!Serial.available());
   
   if (Serial.available() > 0) {
-    String m = Serial.readStringUntil('\n');
+    String m = readLine();
 
     if (m == DAEMON_HEADER + "mode:v") {
       Serial.println(CONTROLLER_HEADER + "ok");
@@ -77,10 +92,10 @@ MODE readModeBlocking() {
 String requestColor() {
   Serial.println(CONTROLLER_HEADER + "color?");
   
-  while (Serial.available() < 8);
+  while (Serial.available() < 9);  // aspetta che venga inviato un colore
   String color = Serial.readStringUntil(';');
   
-  while (Serial.available()) Serial.read();  // Svuota il buffer (\n o space)
+  deleteBuffer();
 
   return color;  // Da verificare che sia un colore
   /*if (isColor(color)) {
