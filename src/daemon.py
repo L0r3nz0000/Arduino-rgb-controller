@@ -25,17 +25,15 @@ CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
 DEBUG_OUTPUT = True
 
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
-def try_connection(ser):
+"""def try_connection(ser):
     if not ser.is_open:
         return False
     
     if DEBUG_OUTPUT:
         print("port:", ser.port, "open")
     
-    time.sleep(0.8)
-    ser.write((DAEMON_HEADER + "connection" + "\n").encode())
+    ser.write((DAEMON_HEADER + "connection").encode().strip())
 
-    time.sleep(0.8)
     response = ser.readline().decode().strip()
 
     if DEBUG_OUTPUT:
@@ -48,7 +46,16 @@ def try_connection(ser):
     else:
         ser.close()  # Chiude la connessione seriale in caso di fallimento
 
-    return success
+    return success"""
+
+def try_connection(ser):
+    ser.write("RGB_Daemon[1.0]-connection".encode().strip())
+    time.sleep(1)
+    command = ser.readline().decode().strip()
+    if command == "RGB_Controller[1.0]-ok":
+        ser.write("RGB_Daemon[1.0]-connected".encode().strip())
+        return True
+    return False
 
 # Cerca un dispositivo compatibile tra i bus seriali collegati
 def search_compatible_devices(baudrate) -> str: #! do not use this -> to complete
@@ -87,55 +94,64 @@ def hls_to_rgb(hls: tuple[float]):
     rgb = [round(x*255.0) for x in rgb]  # Denormalizza i canali
     return rgb
 
+# Converte un colore in formato esadecimale
 def rgb_to_hex(color: tuple[int]):
     return '#{:02x}{:02x}{:02x}'.format(*color)
+
+def calculate_color():
+    # Acquisisce uno screenshot
+    screenshot = ImageGrab.grab()
+    
+    # Ridimensiona l'immagine
+    screenshot = screenshot.resize((screenshot.width//5, screenshot.height//5))
+    avg_color = average_color(screenshot)  # Calcola il colore medio
+
+    # Converte il colore in hls per poi modificare luminosità e saturazione
+    hls = list(rgb_to_hls(avg_color))
+    hls[1] = 0.5    # Luminosità
+    hls[2] = 1      # Saturazione
+    avg_color = hls_to_rgb(hls)  # Riconverte in rgb
+
+    # Converti il colore medio in formato esadecimale
+    return rgb_to_hex(avg_color)
 
 def main():
     # Impostazioni per la comunicazione seriale con Arduino
     # TODO: caricare le configurazioni dal file config.json
     baudrate = 115200       # Baudrate default
 
-    print("Searching devices...")
+    print("Trying connection...")
 
     # TODO: correggere la connessione automatica
     #port = search_compatible_devices(baudrate)
     port = "/dev/ttyACM0"
 
-    if port:
-        # Inizializza la comunicazione seriale
-        ser = serial.Serial(port, baudrate, timeout=1)
+    # Inizializza la comunicazione seriale
+    ser = serial.Serial(port, baudrate, timeout=1)
 
-        if ser.is_open:
-            if try_connection(ser):
-                print(f"\033[92mConnected with: {port}\033[39m")
-            else:
-                print("Device not compatible or incompatible version")
-                exit(0)
+    if ser.is_open:
+        if try_connection(ser):
+            print(f"\033[92mConnected with: {port}\033[39m")
         else:
-            print("Connection timed out")
+            print("Device not compatible or incompatible version")
             exit(0)
     else:
-        print("No compatible devices found or incompatible version")
+        print("Connection timed out")
         exit(0)
+
+    if DEBUG_OUTPUT:
+        print("Waiting for mode request...")
     
     command = ser.readline().strip().decode()
+
+    while command != CONTROLLER_HEADER + "mode?":  # Aspetta che venga richiesto di attivare una modalità
+        command = ser.readline().strip().decode()
+
     ser.write((DAEMON_HEADER + "mode:v" + "\n").encode())
 
+    """ Ciclo principale della modalità video (successivamente verrà implementata anche la audio) """
     while ser.is_open:
-        # Acquisisci uno screenshot e calcola il colore medio
-        screenshot = ImageGrab.grab()
-        
-        screenshot = screenshot.resize((screenshot.width//5, screenshot.height//5))
-        avg_color = average_color(screenshot)
-
-        # Converte il colore in hls per poi modificare luminosità e saturazione
-        hls = list(rgb_to_hls(avg_color))
-        hls[1] = 0.5    # Luminosità
-        hls[2] = 1      # Saturazione
-        avg_color = hls_to_rgb(hls)
-
-        # Converti il colore medio in formato esadecimale (hex)
-        color_hex = rgb_to_hex(avg_color)
+        color_hex = calculate_color()
 
         while True:
             command = ser.readline().strip().decode()
@@ -146,9 +162,9 @@ def main():
                 break
 
     """ 
-    La connessione seriale non viene mai chiusa in 
-    questo codice, ma viene fatto dallo script "release_serial.sh"
-    quando viene bloccato il servizio
+    La connessione seriale non viene mai chiusa da
+    questo programma, ma viene fatto dallo script 
+    "release_serial.sh" quando viene interrotto il servizio.
     """
 
 if __name__ == "__main__":
