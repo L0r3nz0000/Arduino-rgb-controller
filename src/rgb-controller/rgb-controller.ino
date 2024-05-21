@@ -34,7 +34,7 @@ void deleteBuffer() {
 
 String readLine() {
   if (Serial.available()) {
-    String line = Serial.readStringUntil('\n');
+    String line = Serial.readString();
     deleteBuffer();
     return line;
   } else {
@@ -58,7 +58,7 @@ bool tryConnectionBlocking() {
     }
   }
   Serial.print(CONTROLLER_HEADER + "error: ");
-  Serial.println("Comando non valido: " + message);
+  Serial.println("Comando non valido: \"" + message + "\", expected: " + DAEMON_HEADER + "connection");
   return false;
 }
 
@@ -115,6 +115,8 @@ RGB colorConverter(String hexColor) {
 
 void setup() {
   Serial.begin(115200);
+  Serial.setTimeout(10);
+  
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
   pinMode(BLUE, OUTPUT);
