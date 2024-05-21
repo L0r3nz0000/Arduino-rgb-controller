@@ -34,7 +34,7 @@ void deleteBuffer() {
 
 String readLine() {
   if (Serial.available()) {
-    String line = Serial.readString();
+    String line = Serial.readStringUntil('\n');
     deleteBuffer();
     return line;
   } else {
@@ -89,10 +89,10 @@ MODE readModeBlocking() {
   }
 }*/
 
-String requestColor() {
+String requestColor(int timeout) {
   Serial.println(CONTROLLER_HEADER + "color?");
-  
-  while (Serial.available() < 9);  // aspetta che venga inviato un colore
+  long start = millis();
+  while (!Serial.available() || millis() - start > timeout);  // aspetta che venga inviato un colore o che 
   String color = Serial.readStringUntil(';');
   
   deleteBuffer();
@@ -115,7 +115,7 @@ RGB colorConverter(String hexColor) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(10);
+  Serial.setTimeout(5);
   
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
@@ -129,7 +129,7 @@ MODE mode = NOT_SET;
 
 void loop() {
   if (tryConnectionBlocking()) {
-    delay(500);  // delay per permettere al computer di riaprire la porta seriale
+    delay(300);  // delay per permettere al computer di calcolare il nuovo colore
 
     mode = readModeBlocking();
     
@@ -137,10 +137,7 @@ void loop() {
       
       switch (mode) {
         case VIDEO:  // Modalità video
-          color_rgb = colorConverter(requestColor());
-          Serial.println(color_rgb.r);
-          Serial.println(color_rgb.g);
-          Serial.println(color_rgb.b);
+          color_rgb = colorConverter(requestColor(2000));
           setColor(color_rgb);
           delay(600);
       }

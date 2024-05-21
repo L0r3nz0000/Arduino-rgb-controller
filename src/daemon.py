@@ -16,7 +16,9 @@ from PIL import ImageGrab
 import serial
 import serial.tools.list_ports
 import colorsys
-import time
+from time import sleep
+
+from debug import Info
 
 VERSION = "1.0"
 DAEMON_HEADER = f"RGB_Daemon[{VERSION}]-"
@@ -24,46 +26,37 @@ CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
 
 DEBUG_OUTPUT = True
 
+info: Info = Info(DEBUG_OUTPUT)
+
+def write_read(ser, text):
+  ser.write(bytes(text, 'utf-8')) 
+  sleep(0.05)
+  data = ser.readline()
+  return data.decode()
+
 # Prova un handshake con il dispositivo e ritorna lo stato di successo
-"""def try_connection(ser):
-    if not ser.is_open:
-        return False
-    
-    if DEBUG_OUTPUT:
-        print("port:", ser.port, "open")
-    
-    ser.write((DAEMON_HEADER + "connection").encode().strip())
-
-    response = ser.readline().decode().strip()
-
-    if DEBUG_OUTPUT:
-        print("sent:", ser.port, f"\"{DAEMON_HEADER}connection\"")
-        print(f"response: \"{response}\"\n")
-
-    success = response == CONTROLLER_HEADER + "ok"
-    if success:
-        ser.write((DAEMON_HEADER + "connected" + "\n").encode())
-    else:
-        ser.close()  # Chiude la connessione seriale in caso di fallimento
-
-    return success"""
-
 def try_connection(ser):
-    ser.write("RGB_Daemon[1.0]-connection".encode().strip())
-    time.sleep(1)
-    command = ser.readline().decode().strip()
-    if command == "RGB_Controller[1.0]-ok":
-        ser.write("RGB_Daemon[1.0]-connected".encode().strip())
-        return True
-    return False
+    info.DEBUG("port: " + ser.port + " open")
+
+    write_read(ser, "")
+    write_read(ser, "")
+    response = write_read(ser, "RGB_Daemon[1.0]-connection\n")
+
+    info.DEBUG(f"\"{DAEMON_HEADER}connection\" -> {ser.port}")
+    info.DEBUG(f"response: \"{response.strip()}\"\n")
+
+    success = response.strip() == "RGB_Controller[1.0]-ok"
+    if success:
+        response = ser.write("RGB_Daemon[1.0]-connected\n".encode())
+        info.DEBUG(f"\"{DAEMON_HEADER}connected\" -> {ser.port}")
+    return success
 
 # Cerca un dispositivo compatibile tra i bus seriali collegati
-def search_compatible_devices(baudrate) -> str: #! do not use this -> to complete
+def search_compatible_devices(baudrate) -> str: #! do not use this -> uncompleted
     device = None
     ports = serial.tools.list_ports.comports()
     for port in ports:
-        if DEBUG_OUTPUT:
-            print("trying connection with:", port.device)
+        info.DEBUG("trying connection with:" + port.device)
         if try_connection(port.device, baudrate):
             device = port.device
             break
@@ -131,35 +124,41 @@ def main():
 
     if ser.is_open:
         if try_connection(ser):
-            print(f"\033[92mConnected with: {port}\033[39m")
+            Info.SUCCESS(f"Connected with: {port}")
         else:
-            print("Device not compatible or incompatible version")
-            exit(0)
+            Info.ERROR("Device not compatible or incompatible version", _exit=True)
     else:
-        print("Connection timed out")
+        Info.ERROR("Connection timed out")
         exit(0)
 
-    if DEBUG_OUTPUT:
-        print("Waiting for mode request...")
-    
-    command = ser.readline().strip().decode()
+    info.DEBUG("Waiting for mode request...")
+
+    command = ser.readline().decode().strip()
 
     while command != CONTROLLER_HEADER + "mode?":  # Aspetta che venga richiesto di attivare una modalità
-        command = ser.readline().strip().decode()
+        info.DEBUG(f"Recived: \"{command}\"")
+        command = ser.readline().decode().strip()
 
-    ser.write((DAEMON_HEADER + "mode:v" + "\n").encode())
+    write_read(ser, DAEMON_HEADER + "mode:v\n")
 
+    info.DEBUG("Succesfully started video mode")
     """ Ciclo principale della modalità video (successivamente verrà implementata anche la audio) """
     while ser.is_open:
+        info.DEBUG("Calculating color...")
         color_hex = calculate_color()
 
         while True:
-            command = ser.readline().strip().decode()
+            command = ser.readline().decode().strip()
 
             if command == CONTROLLER_HEADER + "color?":
                 # Invia il colore alla porta seriale
+                info.DEBUG("Sending color...")
                 ser.write((color_hex + ";").encode())
+                Info.SUCCESS("Done.")
                 break
+            else:
+                Info.ERROR("Invalid command: " + command)
+            # TODO: aggiungere la possibilità di cambiare modalità a runtime
 
     """ 
     La connessione seriale non viene mai chiusa da
