@@ -129,7 +129,7 @@ MODE mode = NOT_SET;
 
 void loop() {
   if (tryConnectionBlocking()) {
-    delay(300);  // delay per permettere al computer di calcolare il nuovo colore
+    delay(100);  // delay per permettere al computer di calcolare il nuovo colore
 
     mode = readModeBlocking();
     

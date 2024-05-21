@@ -96,13 +96,13 @@ def calculate_color():
     screenshot = ImageGrab.grab()
     
     # Ridimensiona l'immagine
-    screenshot = screenshot.resize((screenshot.width//5, screenshot.height//5))
+    screenshot = screenshot.resize((screenshot.width//6, screenshot.height//6))
     avg_color = average_color(screenshot)  # Calcola il colore medio
 
     # Converte il colore in hls per poi modificare luminosità e saturazione
     hls = list(rgb_to_hls(avg_color))
-    hls[1] = 0.5    # Luminosità
-    hls[2] = 1      # Saturazione
+    hls[1] *= .45      # Luminosità
+    hls[2] = 1        # Saturazione
     avg_color = hls_to_rgb(hls)  # Riconverte in rgb
 
     # Converti il colore medio in formato esadecimale
