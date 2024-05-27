@@ -8,7 +8,7 @@ import serial.tools.list_ports
 import colorsys
 from time import sleep
 from sys import argv
-from filters import CubicBezierFilter
+from filters import Filter
 
 from debug import Info
 
@@ -112,8 +112,8 @@ def calculate_color(filter = False) -> str:
     # Converte il colore in hls per poi modificare luminosità e saturazione
     hls = list(rgb_to_hls(avg_color))
     if filter:
-        hls[1] = CubicBezierFilter.lightness(hls[1])      # Luminosità
-        hls[2] = CubicBezierFilter.saturation(hls[2])     # Saturazione
+        hls[1] = Filter.lightness(hls[1])      # Luminosità
+        hls[2] = Filter.saturation(hls[2])     # Saturazione
     avg_color = hls_to_rgb(hls)  # Riconverte in rgb
 
     # Converti il colore medio in formato esadecimale

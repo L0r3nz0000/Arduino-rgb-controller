@@ -1,6 +1,6 @@
 import math
 
-class CubicBezierFilter:
+class Filter:
     def lightness(x):
         y = ((x - .5) * 1.6) ** 3 + .5
         return max(min(y, 1), 0)
