@@ -1,6 +1,7 @@
 #define RED 3
 #define GREEN 5
 #define BLUE 6
+#define UPDATE_SPEED 100
 
 String VERSION = "1.0";
 String CONTROLLER_HEADER = "RGB_Controller[" + VERSION + "]-";  // ex. msg: RGB_Controller[X.X]-message
@@ -92,12 +93,16 @@ MODE readModeBlocking() {
 String requestColor(int timeout) {
   Serial.println(CONTROLLER_HEADER + "color?");
   long start = millis();
-  while (!Serial.available() || millis() - start > timeout);  // aspetta che venga inviato un colore o che 
+  while (!Serial.available()) {  // aspetta che venga inviato un colore o che scada il timeout
+    if (millis() - start > timeout) {
+      return ""; // Timed out
+    }
+  }
   String color = Serial.readStringUntil(';');
   
   deleteBuffer();
 
-  return color;  // Da verificare che sia un colore
+  return color;  // TODO: verificare che sia un colore
   /*if (isColor(color)) {
     return color;
   } else {
@@ -129,7 +134,7 @@ MODE mode = NOT_SET;
 
 void loop() {
   if (tryConnectionBlocking()) {
-    delay(100);  // delay per permettere al computer di calcolare il nuovo colore
+    delay(300);  // delay per permettere al computer di calcolare il nuovo colore
 
     mode = readModeBlocking();
     
@@ -137,9 +142,17 @@ void loop() {
       
       switch (mode) {
         case VIDEO:  // Modalità video
-          color_rgb = colorConverter(requestColor(2000));
-          setColor(color_rgb);
-          delay(600);
+          String color = requestColor(2000);
+          if (color != "") {
+            color_rgb = colorConverter(color);
+            setColor(color_rgb);
+            
+          } else {
+            Serial.println("Timed out!!");
+            resetColor();
+          }
+          delay(UPDATE_SPEED);
+        break;
       }
     }
   }

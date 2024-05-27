@@ -2,21 +2,12 @@
 
 # Project page: https://github.com/L0r3nz0000/Arduino-rgb-controller
 
-'''
-23:23:09.163 -> RGB_Controller[1.0]-ok
-23:23:18.794 -> RGB_Controller[1.0]-mode?
-23:23:22.302 -> RGB_Controller[1.0]-ok
-23:23:22.302 -> RGB_Controller[1.0]-color?
-23:23:30.905 -> 0
-23:23:30.905 -> 255
-23:23:30.905 -> 0
-'''
-
 from PIL import ImageGrab
 import serial
 import serial.tools.list_ports
 import colorsys
 from time import sleep
+from sys import argv
 
 from debug import Info
 
@@ -24,7 +15,23 @@ VERSION = "1.0"
 DAEMON_HEADER = f"RGB_Daemon[{VERSION}]-"
 CONTROLLER_HEADER = f"RGB_Controller[{VERSION}]-"
 
+def help():
+    print(f"USAGE:\n\t{argv[0]} [OPTIONS]")
+    print("OPTIONS:\n\t-v, --verbose\t\t Activate verbose mode")
+    exit()
+
 DEBUG_OUTPUT = True
+
+# Command line rguments
+if len(argv) == 1:
+    VERBOSE = False
+elif len(argv) == 2:
+    if argv[1] == "-v" or argv[1] == "--verbose":
+        VERBOSE = True
+    else:
+        help()
+else:
+    help()
 
 info: Info = Info(DEBUG_OUTPUT)
 
@@ -43,27 +50,29 @@ def try_connection(ser):
     response = write_read(ser, "RGB_Daemon[1.0]-connection\n")
 
     info.DEBUG(f"\"{DAEMON_HEADER}connection\" -> {ser.port}")
-    info.DEBUG(f"response: \"{response.strip()}\"\n")
+    info.DEBUG(f"response: \"{response.strip()}\"")
 
     success = response.strip() == "RGB_Controller[1.0]-ok"
     if success:
         response = ser.write("RGB_Daemon[1.0]-connected\n".encode())
         info.DEBUG(f"\"{DAEMON_HEADER}connected\" -> {ser.port}")
+    else:
+        Info.ERROR("The device at " + ser.port + " is not compatible")
     return success
 
 # Cerca un dispositivo compatibile tra i bus seriali collegati
-def search_compatible_devices(baudrate) -> str: #! do not use this -> uncompleted
-    device = None
+def search_compatible_devices(baudrate: int) -> serial.Serial:
+    port = None
     ports = serial.tools.list_ports.comports()
     for port in ports:
-        info.DEBUG("trying connection with:" + port.device)
-        if try_connection(port.device, baudrate):
-            device = port.device
-            break
-    return device
+        info.DEBUG("trying connection with: " + port.device)
+        device = serial.Serial(port.device, baudrate, timeout=1)
+        if try_connection(device):
+            return device
+    return None
 
 # Calcola il colore medio di un immagine
-def average_color(image):
+def average_color(image) -> tuple[int]:
     r, g, b = 0, 0, 0
     total_pixels = 0
     for y in range(image.height):
@@ -88,10 +97,10 @@ def hls_to_rgb(hls: tuple[float]):
     return rgb
 
 # Converte un colore in formato esadecimale
-def rgb_to_hex(color: tuple[int]):
+def rgb_to_hex(color: tuple[int]) -> str:
     return '#{:02x}{:02x}{:02x}'.format(*color)
 
-def calculate_color():
+def calculate_color(filter = False) -> str:
     # Acquisisce uno screenshot
     screenshot = ImageGrab.grab()
     
@@ -101,8 +110,9 @@ def calculate_color():
 
     # Converte il colore in hls per poi modificare luminosità e saturazione
     hls = list(rgb_to_hls(avg_color))
-    hls[1] *= .45      # Luminosità
-    hls[2] = 1        # Saturazione
+    if filter:
+        hls[1] = .3      # Luminosità
+        hls[2] = 1        # Saturazione
     avg_color = hls_to_rgb(hls)  # Riconverte in rgb
 
     # Converti il colore medio in formato esadecimale
@@ -115,21 +125,17 @@ def main():
 
     print("Trying connection...")
 
-    # TODO: correggere la connessione automatica
-    #port = search_compatible_devices(baudrate)
-    port = "/dev/ttyACM0"
+    #port = "/dev/ttyACM0"
+    #ser = serial.Serial(port, baudrate, timeout=1)
 
     # Inizializza la comunicazione seriale
-    ser = serial.Serial(port, baudrate, timeout=1)
+    ser = search_compatible_devices(baudrate) # TODO: correggere la connessione automatica
 
-    if ser.is_open:
-        if try_connection(ser):
-            Info.SUCCESS(f"Connected with: {port}")
-        else:
-            Info.ERROR("Device not compatible or incompatible version", _exit=True)
+    if ser:
+        Info.SUCCESS(f"Connected with: {ser.port}")
     else:
-        Info.ERROR("Connection timed out")
-        exit(0)
+        Info.ERROR("Device not compatible or incompatible version")
+        return
 
     info.DEBUG("Waiting for mode request...")
 
@@ -141,30 +147,27 @@ def main():
 
     write_read(ser, DAEMON_HEADER + "mode:v\n")
 
-    info.DEBUG("Succesfully started video mode")
+    Info.SUCCESS("Succesfully started video mode")
     """ Ciclo principale della modalità video (successivamente verrà implementata anche la audio) """
+    Info.SUCCESS("Running...")
     while ser.is_open:
-        info.DEBUG("Calculating color...")
-        color_hex = calculate_color()
+        not_filtered = calculate_color()
+        color_hex = calculate_color(filter=True)
 
         while True:
             command = ser.readline().decode().strip()
 
             if command == CONTROLLER_HEADER + "color?":
                 # Invia il colore alla porta seriale
-                info.DEBUG("Sending color...")
                 ser.write((color_hex + ";").encode())
-                Info.SUCCESS("Done.")
+                info.DEBUG("Not filtered: " + not_filtered)
+                info.DEBUG("Filtered: " + color_hex)
                 break
             else:
                 Info.ERROR("Invalid command: " + command)
             # TODO: aggiungere la possibilità di cambiare modalità a runtime
 
-    """ 
-    La connessione seriale non viene mai chiusa da
-    questo programma, ma viene fatto dallo script 
-    "release_serial.sh" quando viene interrotto il servizio.
-    """
-
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        if not VERBOSE: break
