@@ -1,7 +1,6 @@
 #define RED 3
 #define GREEN 5
 #define BLUE 6
-#define UPDATE_SPEED 100
 
 String VERSION = "1.0";
 String CONTROLLER_HEADER = "RGB_Controller[" + VERSION + "]-";  // ex. msg: RGB_Controller[X.X]-message
@@ -131,28 +130,33 @@ void setup() {
 
 RGB color_rgb;
 MODE mode = NOT_SET;
+const int UPDATE_SPEED = 300; // ms
+const int REQUEST_TIMEOUT = 500;
+bool timed_out = false;
 
 void loop() {
   if (tryConnectionBlocking()) {
-    delay(300);  // delay per permettere al computer di calcolare il nuovo colore
-
     mode = readModeBlocking();
     
     while (true) {
       
-      switch (mode) {
-        case VIDEO:  // Modalità video
-          String color = requestColor(2000);
-          if (color != "") {
-            color_rgb = colorConverter(color);
-            setColor(color_rgb);
-            
-          } else {
-            Serial.println("Timed out!!");
-            resetColor();
+      if (mode == VIDEO) {  // Modalità video
+        String color = requestColor(REQUEST_TIMEOUT);
+        if (color != "") {
+          color_rgb = colorConverter(color);
+          setColor(color_rgb);
+          
+        } else {
+          Serial.println("Request timed out!!");
+        
+          if (timed_out) {  // alla seconda richiesta fallita chiude la connessione
+            timed_out = false;
+            break;
           }
-          delay(UPDATE_SPEED);
-        break;
+          timed_out = true;
+          resetColor();
+        }
+        delay(UPDATE_SPEED);
       }
     }
   }
