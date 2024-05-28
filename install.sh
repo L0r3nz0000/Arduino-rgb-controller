@@ -31,7 +31,10 @@ cp src/$SCRIPT_NAME $INSTALL_DIR/
 echo "Copying src/debug.py to $INSTALL_DIR"
 cp src/debug.py $INSTALL_DIR/
 
-# Assicurati che lo script sia eseguibile
+echo "Copying src/filters.py to $INSTALL_DIR"
+cp src/filters.py $INSTALL_DIR/
+
+# Permessi di esecuzione per lo script
 sudo chmod +x $INSTALL_DIR/$SCRIPT_NAME
 
 # Crea il file di servizio
@@ -62,8 +65,5 @@ sudo systemctl daemon-reload
 
 echo "Enabling $SERVICE_NAME service"
 sudo systemctl enable $SERVICE_NAME
-
-echo "Starting $SERVICE_NAME service"
-sudo systemctl start $SERVICE_NAME
 
 echo "Installation complete."
