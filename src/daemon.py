@@ -37,8 +37,7 @@ else:
 info: Info = Info(DEBUG_OUTPUT)
 
 def write_read(ser, text):
-  ser.write(bytes(text, 'utf-8')) 
-  sleep(0.05)
+  ser.write(bytes(text, 'utf-8'))
   data = ser.readline()
   return data.decode()
 
@@ -46,8 +45,9 @@ def write_read(ser, text):
 def try_connection(ser):
     info.DEBUG("port: " + ser.port + " open")
 
-    write_read(ser, "")
-    write_read(ser, "")
+    ser.readline()
+    ser.readline()
+    sleep(0.05)
     response = write_read(ser, "RGB_Daemon[1.0]-connection\n")
 
     info.DEBUG(f"\"{DAEMON_HEADER}connection\" -> {ser.port}")
@@ -127,7 +127,7 @@ def main():
     print("Trying connection...")
 
     #port = "/dev/ttyACM0"
-    #ser = serial.Serial(port, baudrate, timeout=1)
+    #ser = serial.Serial(port, baudrate, timeout=0.5)
 
     # Inizializza la comunicazione seriale
     ser = search_compatible_devices(baudrate) # TODO: correggere la connessione automatica

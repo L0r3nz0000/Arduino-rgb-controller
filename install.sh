@@ -10,10 +10,8 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Dependencies
-sudo apt install python3
-sudo apt install python3-pillow
-sudo apt install python3-serial
+# Installa le dipendenze
+sudo apt install python3 python3-pillow python3-serial
 
 cp config.json ~/.config/rgb-controller
 
@@ -45,7 +43,7 @@ Description=Descrizione del tuo servizio
 After=network.target
 
 [Service]
-ExecStart=$INSTALL_DIR/$SCRIPT_NAME --verbose
+ExecStart=/usr/bin/python3 $INSTALL_DIR/$SCRIPT_NAME --verbose
 WorkingDirectory=$INSTALL_DIR
 StandardOutput=journal
 StandardError=journal
