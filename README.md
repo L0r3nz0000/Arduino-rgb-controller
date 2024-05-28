@@ -23,4 +23,5 @@ git clone https://github.com/L0r3nz0000/Arduino-rgb-controller
 cd Arduino-rgb-controller
 chmod +x install.sh
 sudo ./install.sh
+sudo systemctl start rgb-controller.service
 ```
