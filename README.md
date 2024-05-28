@@ -1,7 +1,7 @@
 # Arduino-rgb-controller
 ## Cos'è?
 
-![Risultato finale](video.gif)
+![Risultato finale](https://raw.githubusercontent.com/L0r3nz0000/Arduino-rgb-controller/main/video.gif)
 ## Come funziona?
 Questo progetto è diviso in due componenti principali: il service installato nel computer e lo sketch sulla scheda.
 Il programma sul computer cattura le immagini presenti sullo schermo per poi abbassarne la qualità (per motivi di prestazioni) e calcola il colore medio presente nell'immagine catturata, poi viene applicato un filtro che ne modifica saturazione e luminosità per poi inviare alla scheda il colore risultante, a questo punto l'arduino utilizza 3 pin pwm per creare un'uscita analogica su cui si può collagare un qualsiasi led rgb.
